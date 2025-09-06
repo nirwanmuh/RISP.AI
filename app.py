@@ -47,9 +47,21 @@ def save_uploaded_file(uploaded_file) -> str:
 def transcribe_with_whisper_local(audio_path: str, model_name: str = "small") -> str:
     if not WHISPER_AVAILABLE:
         raise RuntimeError("whisper not installed. Install via `pip install -U openai-whisper`.")
-    model = whisper.load_model(model_name)
-    result = model.transcribe(audio_path)
-    return result.get("text", "")
+
+    try:
+        model = whisper.load_model(model_name)
+        result = model.transcribe(audio_path)
+        return result.get("text", "")
+    except FileNotFoundError as e:
+        # Biasanya karena ffmpeg tidak tersedia
+        import speech_recognition as sr
+        r = sr.Recognizer()
+        with sr.AudioFile(audio_path) as source_audio:
+            audio_data = r.record(source_audio)
+        try:
+            return r.recognize_google(audio_data, language='id-ID')
+        except Exception as e2:
+            return f"[Error fallback transcription: {e2}]"
 
 
 # Gemini LLM correction and structuring

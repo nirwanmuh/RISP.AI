@@ -1,0 +1,5 @@
+streamlit
+openai-whisper
+speechrecognition
+streamlit-webrtc
+google-generativeai

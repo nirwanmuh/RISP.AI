@@ -1,8 +1,8 @@
 import streamlit as st
 import tempfile
 import os
-import whisper
 import subprocess
+from faster_whisper import WhisperModel
 
 st.title("🎙️ Audio/Video to Text Transcriber")
 
@@ -18,9 +18,9 @@ if uploaded_file is not None:
         tmp_file.write(uploaded_file.read())
         tmp_path = tmp_file.name
 
-    st.audio(tmp_path)  # Bisa diputar
+    st.audio(tmp_path)
 
-    # Konversi ke wav (agar whisper lebih stabil)
+    # Konversi ke wav 16kHz mono
     audio_path = tmp_path + ".wav"
     subprocess.run([
         "ffmpeg", "-i", tmp_path,
@@ -28,23 +28,26 @@ if uploaded_file is not None:
         audio_path, "-y"
     ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-    # Load model whisper
+    # Load faster-whisper
     st.info("Memuat model transkripsi...")
-    model = whisper.load_model("base")
+    model = WhisperModel("base", device="cpu", compute_type="int8")
 
     # Transkripsi
     st.info("Sedang transkripsi audio...")
-    result = model.transcribe(audio_path, fp16=False)
-    transcript = result["text"]
+    segments, info = model.transcribe(audio_path)
+
+    transcript = ""
+    for seg in segments:
+        transcript += seg.text + " "
 
     # Hasil
     st.subheader("📄 Hasil Transkripsi:")
-    st.text_area("Teks", transcript, height=300)
+    st.text_area("Teks", transcript.strip(), height=300)
 
     # Tombol download
     st.download_button(
         "💾 Download Transkripsi",
-        transcript,
+        transcript.strip(),
         file_name="transkripsi.txt",
         mime="text/plain"
     )
